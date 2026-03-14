@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Freeze Dry Gallery</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1 id="gallery-name">Freeze Dry Gallery</h1>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="gallery-grid" id="grid"></div>
+
+  <div class="empty-state hidden" id="empty">
+    <h2>No artworks yet</h2>
+    <p>Add wallets to your .env and restart to scan for inscriptions.</p>
+  </div>
+
+  <footer>
+    Permanently inscribed on <a href="https://solana.com">Solana</a> via
+    <a href="https://freezedry.art">Freeze Dry</a>
+  </footer>
+
+  <script type="module">
+    const escHtml = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+
+    function formatBytes(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+      return (b / 1048576).toFixed(2) + ' MB';
+    }
+
+    async function init() {
+      const [configResp, artResp] = await Promise.all([
+        fetch('/api/config'),
+        fetch('/api/artworks'),
+      ]);
+      const config = await configResp.json();
+      const { artworks } = await artResp.json();
+
+      document.getElementById('gallery-name').textContent = config.name;
+      document.title = config.name;
+      document.getElementById('stats').textContent =
+        `${config.totalWithBlobs} artwork${config.totalWithBlobs !== 1 ? 's' : ''} on-chain`;
+
+      const grid = document.getElementById('grid');
+      const empty = document.getElementById('empty');
+
+      if (artworks.length === 0) {
+        grid.classList.add('hidden');
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      for (const art of artworks) {
+        const card = document.createElement('div');
+        card.className = 'gallery-card';
+        card.onclick = () => location.href = `/art.html?hash=${encodeURIComponent(art.hash)}`;
+        card.innerHTML = `
+          <img src="/blob/${escHtml(art.hash)}" alt="${escHtml(art.name || 'Artwork')}" loading="lazy">
+          <div class="gallery-card-info">
+            <div class="gallery-card-name">${escHtml(art.name || art.hash.slice(0, 20) + '...')}</div>
+            <div class="gallery-card-meta">${art.blob_size ? formatBytes(art.blob_size) : ''}</div>
+            <span class="gallery-card-badge">On-Chain</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+    }
+
+    init().catch(err => console.error('Gallery init failed:', err));
+  </script>
+
+  <style>.hidden { display: none !important; }</style>
+</body>
+</html>

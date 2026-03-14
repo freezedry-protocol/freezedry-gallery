@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artwork</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="detail-container">
+    <a href="/" class="back-link">Back to gallery</a>
+    <img id="artwork-img" class="detail-image" alt="Artwork">
+    <div class="detail-info" id="info"></div>
+  </div>
+
+  <footer>
+    Permanently inscribed on <a href="https://solana.com">Solana</a> via
+    <a href="https://freezedry.art">Freeze Dry</a>
+  </footer>
+
+  <script type="module">
+    const escHtml = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+
+    function formatBytes(b) {
+      if (!b) return '—';
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+      return (b / 1048576).toFixed(2) + ' MB';
+    }
+
+    async function init() {
+      const hash = new URLSearchParams(location.search).get('hash');
+      if (!hash) { location.href = '/'; return; }
+
+      const resp = await fetch(`/api/artwork/${encodeURIComponent(hash)}`);
+      if (!resp.ok) { location.href = '/'; return; }
+      const art = await resp.json();
+
+      document.title = art.name || 'Artwork';
+      document.getElementById('artwork-img').src = `/blob/${escHtml(hash)}`;
+      document.getElementById('artwork-img').alt = escHtml(art.name || 'Artwork');
+
+      const date = art.timestamp ? new Date(art.timestamp).toLocaleDateString() : '—';
+      const solscanBase = 'https://solscan.io/tx/';
+
+      document.getElementById('info').innerHTML = `
+        <h2>${escHtml(art.name || hash.slice(0, 24) + '...')}</h2>
+        <span class="gallery-card-badge">Permanently On-Chain</span>
+        <table>
+          <tr><td>Hash</td><td style="font-family:monospace;font-size:0.75rem;word-break:break-all">${escHtml(hash)}</td></tr>
+          ${art.width && art.height ? `<tr><td>Dimensions</td><td>${art.width} x ${art.height}</td></tr>` : ''}
+          <tr><td>Size</td><td>${formatBytes(art.blob_size)}</td></tr>
+          <tr><td>Chunks</td><td>${art.chunk_count || '—'} memo transactions</td></tr>
+          <tr><td>Inscribed</td><td>${date}</td></tr>
+          ${art.pointer_sig ? `<tr><td>Pointer TX</td><td><a href="${solscanBase}${escHtml(art.pointer_sig)}" target="_blank">${escHtml(art.pointer_sig.slice(0, 16))}...</a></td></tr>` : ''}
+          ${art.nft_address ? `<tr><td>NFT</td><td><a href="https://solscan.io/token/${escHtml(art.nft_address)}" target="_blank">${escHtml(art.nft_address.slice(0, 16))}...</a></td></tr>` : ''}
+        </table>
+      `;
+    }
+
+    init().catch(err => console.error('Detail init failed:', err));
+  </script>
+</body>
+</html>
