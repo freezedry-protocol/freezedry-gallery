@@ -1,3 +1,25 @@
+# Pre-commit blocklist — contains actual wallet/IP patterns
+.githooks/.blocklist
+
 node_modules/
 data/
+
+# Secrets — NEVER commit
 .env
+.env.*
+.env.local
+.env*.local
+*-keypair.json
+keys/
+*.pem
+secrets/
+credentials.*
+
+# OS junk
+.DS_Store
+Thumbs.db
+*.log
+
+# CLAUDE files — private project context
+CLAUDE.md
+**/CLAUDE.md
